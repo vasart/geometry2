@@ -9,15 +9,32 @@ endif()
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra)
 endif()
-# set(CMAKE_BUILD_TYPE Debug)
+
+
 find_package(ament_cmake REQUIRED)
-find_package(python_cmake_module REQUIRED)
 find_package(builtin_interfaces REQUIRED)
 find_package(geometry_msgs REQUIRED)
-find_package(PythonLibs 3 REQUIRED)
 find_package(rclpy REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tf2_msgs REQUIRED)
+
+find_package(python_cmake_module REQUIRED)
+find_package(PythonExtra MODULE REQUIRED)
+
+set(_PYTHON_EXECUTABLE "${PYTHON_EXECUTABLE}")
+
+if(WIN32 AND CMAKE_BUILD_TYPE STREQUAL "Debug")
+  set(PYTHON_EXECUTABLE "${PYTHON_EXECUTABLE_DEBUG}")
+endif()
+
+function(set_properties _targetname _build_type)
+  set_target_properties(${_targetname} PROPERTIES
+    PREFIX ""
+    LIBRARY_OUTPUT_DIRECTORY${_build_type} "${CMAKE_CURRENT_BINARY_DIR}/test_${PROJECT_NAME}"
+    RUNTIME_OUTPUT_DIRECTORY${_build_type} "${CMAKE_CURRENT_BINARY_DIR}/test_${PROJECT_NAME}"
+    OUTPUT_NAME "_${_targetname}${PythonExtra_EXTENSION_SUFFIX}"
+    SUFFIX "${PythonExtra_EXTENSION_EXTENSION}")
+endfunction()
 
 include_directories(${PYTHON_INCLUDE_PATH})
 
