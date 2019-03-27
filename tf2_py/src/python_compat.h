@@ -26,7 +26,7 @@ inline PyObject *stringToPython(const char *input)
 inline std::string stringFromPython(PyObject * input)
 {
   Py_ssize_t size;
-  char * data;
+  const char * data;
 #if PY_MAJOR_VERSION >= 3
   data = PyUnicode_AsUTF8AndSize(input, &size);
 #else
