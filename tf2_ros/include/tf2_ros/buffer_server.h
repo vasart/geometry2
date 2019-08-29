@@ -36,24 +36,28 @@
 *********************************************************************/
 #ifndef TF2_ROS_BUFFER_SERVER_H_
 #define TF2_ROS_BUFFER_SERVER_H_
+#include <memory>
+#include <string>
 
-#include <actionlib/server/action_server.h>
-#include <tf2_msgs/LookupTransformAction.h>
-#include <geometry_msgs/msg/transform_stamped.h>
+#include <geometry_msgs/msg/transform_stamped.hpp>
+#include <rclcpp/rclcpp.hpp>
+#include <rclcpp_action/rclcpp_action.hpp>
+#include <tf2_msgs/action/lookup_transform.hpp>
+
 #include <tf2_ros/buffer.h>
 
 namespace tf2_ros
 {
   /** \brief Action server for the actionlib-based implementation of tf2_ros::BufferInterface.
-   * 
+   *
    * Use this class with a tf2_ros::TransformListener in the same process.
    * You can use this class with a tf2_ros::BufferClient in a different process.
    */
   class BufferServer
   {
     private:
-      typedef actionlib::ActionServer<tf2_msgs::LookupTransformAction> LookupTransformServer;
-      typedef LookupTransformServer::GoalHandle GoalHandle;
+      using LookupTransformAction = tf2_msgs::action::LookupTransform;
+      using GoalHandle = std::shared_ptr<rclcpp_action::ServerGoalHandle<LookupTransformAction>>;
 
       struct GoalInfo
       {
@@ -64,29 +68,30 @@ namespace tf2_ros
     public:
       /** \brief Constructor
        * \param buffer The Buffer that this BufferServer will wrap.
+       * \param node The node to add the buffer server to.
        * \param ns The namespace in which to look for action clients.
-       * \param auto_start Pass argument to the constructor of the ActionServer.
        * \param check_period How often to check for changes to known transforms (via a timer event).
        */
-      BufferServer(const Buffer& buffer, const std::string& ns,
-          bool auto_start = true, tf2::Duration check_period = tf2::durationFromSec(0.01));
-
-      /** \brief Start the action server.
-       */
-      void start();
+      BufferServer(
+        const tf2_ros::Buffer& buffer,
+        rclcpp::Node::SharedPtr node,
+        const std::string& ns,
+        tf2::Duration check_period = tf2::durationFromSec(0.01));
 
     private:
-      void goalCB(GoalHandle gh);
-      void cancelCB(GoalHandle gh);
-      void checkTransforms(const tf2::TimePointrEvent& e);
+      rclcpp_action::GoalResponse goalCB(
+        const rclcpp_action::GoalUUID & uuid, std::shared_ptr<const LookupTransformAction::Goal> goal);
+      void acceptedCB(GoalHandle gh);
+      rclcpp_action::CancelResponse cancelCB(GoalHandle gh);
+      void checkTransforms();
       bool canTransform(GoalHandle gh);
-      geometry_msgs::TransformStamped lookupTransform(GoalHandle gh);
+      geometry_msgs::msg::TransformStamped lookupTransform(GoalHandle gh);
 
       const Buffer& buffer_;
-      LookupTransformServer server_;
+      rclcpp_action::Server<LookupTransformAction>::SharedPtr server_;
       std::list<GoalInfo> active_goals_;
       std::mutex mutex_;
-      tf2::TimePointr check_timer_;
+      rclcpp::TimerBase::SharedPtr check_timer_;
   };
 }
 #endif
